@@ -1,0 +1,113 @@
+---
+title: "Analysis of storm event impacts on population health and economy in United States"
+author: "_Khaled Mahmud_"
+date: "_9/10/2020_"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 10, fig.height = 6)
+```
+
+## Synopsis
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(dplyr)
+library(knitr)
+filename <- "StormData.csv.bz2"
+storm_df <- read.csv(paste("./data/", filename), na.strings = c("", " ", "NA"))
+
+storm_sub <- c("EVTYPE", 
+               "FATALITIES", 
+               "INJURIES", 
+               "PROPDMG", 
+               "PROPDMGEXP", 
+               "CROPDMG", 
+               "CROPDMGEXP") %>% 
+  subset(storm_df, select = .) %>% 
+  subset(., subset = EVTYPE != "?" & (FATALITIES > 0 | 
+           INJURIES > 0 | 
+           PROPDMG > 0 | 
+           CROPDMG > 0))
+
+storm_sub2 <- subset(storm_sub, subset = FATALITIES > 0 | 
+                       INJURIES > 0 | 
+                       PROPDMG > 0 | 
+                       CROPDMG > 0)
+exp_factor <- function(x){
+  ifelse(x %in% c("+","-","?"), 10^0,
+    ifelse(x %in% as.character(0:8), 10^as.numeric(x),
+           ifelse(x %in% c("b","B"), 10^9,    # billion
+                  ifelse(x %in% c("m","M"), 10^6,    # million/mega
+                         ifelse(x %in% c("k","K"), 10^3,    # kilo   
+                                ifelse(x %in% c("h","H"), 10^2,    # hecto
+                                       1))))))
+}
+df_copy <- storm_sub
+df_copy$PROPDMG <- df_copy$PROPDMG * exp_factor(df_copy$PROPDMGEXP)
+df_copy$CROPDMG <- df_copy$CROPDMG * exp_factor(df_copy$CROPDMGEXP)
+
+fatalities <- aggregate(cbind(FATALITIES + INJURIES, INJURIES, FATALITIES) ~ EVTYPE , data=df_copy, FUN=sum) 
+fatalities <- fatalities[order(fatalities[, 2], decreasing = TRUE), ]
+MaxFatalities <- fatalities[1:10, ]
+print(MaxFatalities)
+
+pal <- colorRampPalette(colors = c("#6b001d", "#ffffc1"))(10)
+
+par(mar = c(5.1, 8.1, 4.1, 4.1))
+options(scipen=1)
+b4 <- barplot(as.matrix(MaxFatalities[, 2:4]), col=pal, 
+        las = 1, beside = T, 
+        main = "Weather Events With\n The Top 10 Highest Fatalities", 
+        ylab = "", legend = MaxFatalities$EVTYPE, 
+        args.legend = list(x = "topright", bty = 'n', inset=c(0, 0)),
+        ylim = c(0, 1.1 * max(MaxFatalities[, 2])))
+text(x = b4, 
+     y = as.matrix(MaxFatalities[order(MaxFatalities[, 2], decreasing = TRUE), ][, 2:4]),
+     labels = paste(as.character(
+       as.matrix(round(
+         MaxFatalities[order(MaxFatalities[, 2], decreasing = TRUE), ][, 2:4]/1000, 2))), 'K'), 
+     pos = 3, cex = 0.6, srt =45)
+mtext("Number of Fatalities", line = 4.5, side = 2)
+
+
+
+
+#ecodmg <- aggregate(cbind(PROPDMG + CROPDMG, PROPDMG, CROPDMG) ~ EVTYPE , data=df_copy, FUN=sum) 
+#ecodmg <- ecodmg[order(-ecodmg[, 2]), ]
+#ecodmgMax <- ecodmg[1:10, ]
+#print(ecodmgMax)
+
+ecodmgMax <- aggregate(cbind(PROPDMG + CROPDMG, PROPDMG, CROPDMG) ~ EVTYPE , data=df_copy, FUN=sum) %>%
+  .[order(-.[, 2]), ] %>% .[1:10, ]
+
+row.names(ecodmgMax) <- NULL
+names(ecodmgMax)[2] <- "Total"
+kable(x=ecodmgMax, caption = "Table 1")
+
+pal2 <- colorRampPalette(colors = c("#063615", "#ffffc1"))(10)
+par(mar = c(5.1, 8.1, 4.1, 4.1))
+b5 <- barplot(as.matrix(ecodmgMax[, 2:4]), col=pal2, 
+              las = 1, beside = T, 
+              main = "Weather Events With\n The Top 10 Highest Fatalities", 
+              ylab = "", legend = ecodmgMax$EVTYPE, 
+              args.legend = list(x = "topright", bty = 'n', inset=c(-0.08,0)),
+              ylim = c(0, 1.1 * max(ecodmgMax[, 2])))
+text(x = b5, 
+     y = as.matrix(ecodmgMax[order(-ecodmgMax[, 2]), ][, 2:4]),
+     labels = 
+       as.matrix(signif(
+         ecodmgMax[order(-ecodmgMax[, 2]), ][, 2:4], digits=1)), 
+     pos = 3, cex = 0.6, srt =45)
+mtext("Number of Damage", line = 4.5, side = 2)
+
+```
+
+## Including Plots
+
