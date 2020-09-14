@@ -1,19 +1,18 @@
 library(dplyr)
-library(ggplot2)
-library(RColorBrewer)
 library(knitr)
+
+filename <- "StormData.csv.bz2"
 
 if(!file.exists("./data")) {
   dir.create("./data")
-  filename <- "StormData.csv.bz2"
   fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
   print("Downloading File.....")
-  download.file(fileUrl, destfile = paste("./data/", filename)) # For windows operating system method="curl" has been eliminated
-  # unzip("./data/dataFile.zip", exdir = "./data")
+  download.file(fileUrl, destfile = paste("./data/", filename)) 
   print("File Downloaded Successfully!")
 }
 
 storm_df <- read.csv(paste("./data/", filename), na.strings = c("", " ", "NA"))
+
 dim(storm_df)
 names(storm_df)
 # colnames(storm_df)
@@ -64,7 +63,7 @@ storm_sub2 <- subset(storm_sub, subset = FATALITIES > 0 |
 sData <- storm_sub[storm_sub$FATALITIES > 0 | storm_sub$INJURIES > 0 | storm_sub$PROPDMG > 
                      0 | storm_sub$CROPDMG > 0, ]
 
-mean(is.na(storm_sub2)) * 100
+mean(is.na(storm_sub)) * 100
 mean(is.na(sData)) * 100
 
 propDmgEXP <- unique (storm_sub$PROPDMGEXP)
